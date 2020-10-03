@@ -1,0 +1,235 @@
+	    double MaxOutputX;
+            double MaxOutputY;
+            float MinOutput = 0.130f;
+            float SolarSpeedX = 1f;
+            float SolarSpeedY = 1f;
+            double CurrentOutput;
+            double cur2;
+            float XMaximum = -1f;
+            float Xrotate;
+            float Yrotate;
+            float YMaximum = -1f;
+            double Xan;
+            double Yan;
+
+            int minus = 1;
+            int minusY=1;
+            IMySolarPanel solarP;
+            IMyMotorStator X;
+            IMyMotorStator Y;
+            IMyTextPanel Text;
+
+            bool needZero = true;
+            bool needToStop = false;
+            bool Xrun = true;
+            bool Yrun = false;
+            bool Xend = false;
+            bool Yend = false;
+            double xAngle;
+            double yAngle;
+            public Program()
+            {
+                Y = GridTerminalSystem.GetBlockWithName("Y") as IMyMotorStator;
+                Text = GridTerminalSystem.GetBlockWithName("D") as IMyTextPanel;
+                solarP = GridTerminalSystem.GetBlockWithName("SOLAR") as IMySolarPanel;
+                MaxOutputX = solarP.MaxOutput;
+                //MaxOutputY = solarP.MaxOutput;
+                
+                Text.WritePublicText("xyi\r\n", true);
+                X = GridTerminalSystem.GetBlockWithName("X") as IMyMotorStator;
+                Runtime.UpdateFrequency = UpdateFrequency.Update1;
+            }
+            public void Save()
+            {
+            }
+            public void Main(string argument, UpdateType updateSource)
+            {   
+                CurrentOutput = solarP.MaxOutput;
+                Text.WritePublicText("current" + CurrentOutput + "\r\n", true);
+                Text.WritePublicText("Max" + MaxOutputX + "\r\n", true);
+
+        if (solarP.MaxOutput == 0)
+        {
+            Zero();
+        }
+        else
+        {
+            if (Xrun)
+            {
+                X.SetValue("Velocity", Xrotate);
+                if (CurrentOutput < MaxOutputX)
+                {
+                    Text.WritePublicText("minus = " + minus, false);
+                    if (minus == 3)
+                    {
+                        Text.WritePublicText("minus = 3 ", false);
+                        Xrotate = 0;
+                        MaxOutputY = solarP.MaxOutput;
+                        minus = 4;
+                        Xend = true;
+                        Xrun = false;
+                        Yrun = true;
+                    }
+                    else if (minus == 2)
+                    {
+                        MaxOutputX = CurrentOutput;
+                        Xrotate = -Xrotate;
+                        minus = 3;//
+                    }
+                    else if (minus == 1)
+                    {
+                        MaxOutputX = CurrentOutput;
+                        Xrotate = -Xrotate;
+                        minus = 0;
+                    }
+                    else
+                    {
+                        X.SetValue("Velocity", -Xrotate);
+                    }
+                }
+                if (CurrentOutput >= MaxOutputX)
+                {
+                    
+                    if (Xrotate == 0 && Xrun == true)
+                    {
+                        Xrotate = XMaximum;
+
+                    }
+                    MaxOutputX = CurrentOutput;
+                    X.SetValue("Velocity", Xrotate);
+                    if (minus == 3)
+                    {
+
+                    }
+                    else
+                    minus = 2;
+
+
+                }
+            }
+            else
+            {
+                X.SetValue("Velocity", 0f);
+            }
+            if (Yrun)
+            {
+                Y.SetValue("Velocity", Yrotate);
+                if (CurrentOutput < MaxOutputX)
+                {
+                    Text.WritePublicText("minusY = " + minusY, false);
+                    if (minusY == 3)
+                    {
+                        Text.WritePublicText("minusY = 3 ", false);
+                        Yrotate = 0;
+                        MaxOutputY = solarP.MaxOutput;
+                        minusY = 4;
+                        Yend = true;
+                        Xrun = false;
+                        Yrun = false;
+                    }
+                    else if (minusY == 2)
+                    {
+                        MaxOutputX = CurrentOutput;
+                        Yrotate = -Yrotate;
+                        minusY = 3;
+                    }
+
+                    
+                    else if (minusY == 1)
+                    {
+                        MaxOutputX = CurrentOutput;
+                        Yrotate = -Yrotate;
+                        minusY = 0;
+                    }
+                    else
+                    {
+                        Y.SetValue("Velocity", -Yrotate);
+                    }
+                }
+                if (CurrentOutput >= MaxOutputX)
+                {
+
+                    if (Yrotate == 0 && Yrun == true)
+                    {
+                        Yrotate = XMaximum;
+
+                    }
+                    MaxOutputX = CurrentOutput;
+                    Y.SetValue("Velocity", Yrotate);
+                    if (minusY == 3)
+                    {
+
+                    }
+                    else
+                        minusY = 2;
+
+
+                }
+            }
+            else
+            {
+                Y.SetValue("Velocity", 0f);
+            }
+
+        }
+        if (Xend&&Yend)
+        {
+            if (solarP.MaxOutput <= MinOutput)
+            {
+                minus = 1;
+                minusY = 1;
+
+                Xrun = true;
+                Yrun = false;
+
+                Xrotate = 0f;
+                Yrotate = 0f;
+            }
+        }
+            }
+            public void Zero()
+            {
+                Xrotate = XMaximum;
+                xAngle = Convert.ToInt32(X.Angle * (180 / 3.14f));
+                yAngle = Convert.ToInt32(Y.Angle * (180 / 3.14f));
+                if (xAngle > -1 && xAngle < 1)
+                {
+                    X.SetValue("Velocity", 0f);
+                }
+                else
+                {
+                    if (xAngle > 180)
+                    {
+                        X.SetValue("Velocity", SolarSpeedX);
+                    }
+                    else
+                    {
+                        X.SetValue("Velocity", -SolarSpeedX);
+                    }
+                }
+
+                if (yAngle > 269 && yAngle < 271)
+                {
+                    Y.SetValue("Velocity", 0f);
+                }
+                else
+                {
+                    if (yAngle <= 90)
+                    {
+                        Y.SetValue("Velocity", -SolarSpeedY);
+                    }
+                    else if (yAngle > 270)
+                    {
+                        Y.SetValue("Velocity", -SolarSpeedY);
+                    }
+                    else
+                    {
+                        Y.SetValue("Velocity", SolarSpeedY);
+                    }
+                }
+                if (xAngle > -1 && xAngle < 1 && yAngle > 269 && yAngle < 271)
+                {
+                    MaxOutputX = solarP.MaxOutput;
+                    needZero = false;
+                }
+            }
